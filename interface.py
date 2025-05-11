@@ -1,23 +1,20 @@
-# fantasy_interface.py
-
 import tkinter as tk
 from tkinter import messagebox
 from PIL import Image, ImageTk
 import io
-import time
-import config
-import random
+
 
 
 class FantasyInterface:
-    def __init__(self, root):
+    def __init__(self, root, logic=None):
         self.root = root
         self.root.title("Фэнтези Квест")
         self.root.geometry("1200x900")
         self.root.configure(bg="black")
 
-        self.current_npc = None  # для обычного NPC
-        self.status_data = config.STATUS_DATA.copy()
+        self.logic = logic
+        self.current_npc = None
+        self.status_data = {}  # будет обновляться извне
         self.log_content = ""
 
         # === ВЕРХ ===
@@ -38,13 +35,14 @@ class FantasyInterface:
         self.text_box.tag_config("system", foreground="gray")
         self.text_box.tag_config("warning", foreground="orange")
         self.text_box.tag_config("error", foreground="red")
+        self.text_box.tag_config("item", foreground="gold")
 
         # === КНОПКИ ===
         self.button_frame = tk.Frame(root, bg="black")
         self.button_frame.pack(pady=10)
 
         self.buttons = {}
-        self.button_labels = ["Побродить", "Поговорить", "Осмотреть", "Инвентарь", "Показать лог", "Торговец"]
+        self.button_labels = ["Побродить", "Поговорить", "Инвентарь", "Показать лог", "Торговец"]
         for label in self.button_labels:
             btn = tk.Button(
                 self.button_frame, text=label, width=15,
@@ -83,21 +81,10 @@ class FantasyInterface:
         self.image_panel.image = photo
 
     def handle_action(self, action):
-        if action == "Побродить":
-            self.enter_location()
-        elif action == "Поговорить":
-            if self.current_npc:
-                self.dialogue_window(self.current_npc)
-            else:
-                self.append_text("В ответ лишь лёгкие дуновения ветра...", tag="warning")
-        elif action == "Осмотреть":
-            self.append_text("Вы осматриваете местность...", tag="event")
-        elif action == "Инвентарь":
-            self.show_inventory()
-        elif action == "Показать лог":
-            self.show_log_window()
-        elif action == "Торговец":
-            self.show_merchant_window()
+        if self.logic:
+            self.logic.on_action(action)
+        else:
+            self.append_text(f"Нет логики для действия: {action}", tag="warning")
 
     def append_text(self, text, tag=None):
         self.text_box.config(state=tk.NORMAL)
@@ -144,27 +131,9 @@ class FantasyInterface:
         self.log_textbox_widget.insert(tk.END, self.log_content)
         self.log_textbox_widget.config(state=tk.DISABLED)
 
-    def enter_location(self):
-        self.append_text("Вы входите в новую локацию...", tag="system")
-        self.root.after(config.ENTER_DELAY_MS, self.location_event)
-
-    def location_event(self):
-        location = random.choice(config.LOCATIONS)
-        self.status_data["Локация"] = location
-        self.update_status()
-
-        description = config.LOCATION_DESCRIPTIONS.get(location, "Здесь пусто и странно тихо.")
-        self.append_text(description, tag="event")
-
-        if random.random() < config.ENCOUNTER_CHANCE / 100:
-            self.current_npc = random.choice([npc for npc in config.NPC_NAMES if npc != "Торговец"])
-            self.append_text(f"Вы встречаете персонажа: {self.current_npc}", tag="dialogue")
-        else:
-            self.current_npc = None
-
-    def dialogue_window(self, npc):
+    def show_dialogue(self, npc_name, messages):
         dialog = tk.Toplevel(self.root)
-        dialog.title(f"Диалог с {npc}")
+        dialog.title(f"Диалог с {npc_name}")
         dialog.geometry("600x500")
         dialog.configure(bg="black")
 
@@ -174,7 +143,9 @@ class FantasyInterface:
         chat_text.tag_config("npc", foreground="lightblue")
 
         chat_text.config(state=tk.NORMAL)
-        chat_text.insert(tk.END, f"{npc}: Приветствую. Спрашивай что хочешь.\n", "npc")
+        for speaker, msg in messages:
+            tag = "player" if speaker == "player" else "npc"
+            chat_text.insert(tk.END, f"{speaker.capitalize()}: {msg}\n", tag)
         chat_text.config(state=tk.DISABLED)
 
         entry_frame = tk.Frame(dialog, bg="black")
@@ -190,54 +161,32 @@ class FantasyInterface:
                 return
             chat_text.config(state=tk.NORMAL)
             chat_text.insert(tk.END, f"Вы: {player_input}\n", "player")
-            response = f"{npc}: Хм... интересная мысль."
-            chat_text.insert(tk.END, response + "\n", "npc")
+            response = self.logic.get_npc_response(npc_name, player_input) if self.logic else "..."
+            chat_text.insert(tk.END, f"{npc_name}: {response}\n", "npc")
             chat_text.config(state=tk.DISABLED)
             entry.delete(0, tk.END)
-            self.append_log(f"Вы -> {npc}: {player_input}")
-            self.append_log(response)
+            self.append_log(f"Вы -> {npc_name}: {player_input}")
+            self.append_log(f"{npc_name}: {response}")
 
         send_button = tk.Button(entry_frame, text="Отправить", command=send_reply, bg="#333", fg="white")
         send_button.pack(side=tk.RIGHT)
 
-    def show_inventory(self):
-        inv_text = "\n".join(config.INVENTORY)
-        messagebox.showinfo("Инвентарь", f"У вас есть:\n{inv_text}")
-
-    def show_merchant_window(self):
-        win = tk.Toplevel(self.root)
-        win.title("Торговец")
-        win.geometry("400x400")
-        win.configure(bg="black")
-
-        label = tk.Label(win, text="Добро пожаловать к торговцу!", font=("Arial", 14), bg="black", fg="orange")
-        label.pack(pady=10)
-
-        item_list = tk.Listbox(win, font=("Arial", 12), bg="black", fg="white", selectbackground="gray")
-        for item in ["Зелье здоровья", "Щит", "Амулет света"]:
-            item_list.insert(tk.END, item)
-        item_list.pack(padx=10, pady=10, fill=tk.BOTH, expand=True)
-
-        def buy():
-            selection = item_list.curselection()
-            if selection:
-                item = item_list.get(selection)
-                self.append_text(f"Вы купили: {item}", tag="item")
-                self.append_log(f"Покупка у торговца: {item}")
-
-        def sell():
-            self.append_text("Вы ничего не продали. (ещё не реализовано)", tag="warning")
-
-        buy_btn = tk.Button(win, text="Купить", command=buy, bg="#333", fg="white")
-        sell_btn = tk.Button(win, text="Продать", command=sell, bg="#333", fg="white")
-        close_btn = tk.Button(win, text="Закрыть", command=win.destroy, bg="#333", fg="white")
-
-        buy_btn.pack(side=tk.LEFT, padx=10, pady=10, expand=True)
-        sell_btn.pack(side=tk.LEFT, padx=10, pady=10, expand=True)
-        close_btn.pack(side=tk.RIGHT, padx=10, pady=10)
+# if __name__ == "__main__":
+#     root = tk.Tk()
+#     app = FantasyInterface(root)
+#     root.mainloop()
 
 
-if __name__ == "__main__":
-    root = tk.Tk()
-    app = FantasyInterface(root)
-    root.mainloop()
+### ТАК КОРОЧЕ ЭТОТ ФАЙЛ УЖЕ ДЛЯ ИМПОРТА
+# ЧТО БЫЛО СДЕЛАНО:
+# Удалены/упрощены логические методы:
+#   enter_location()
+#   location_event()
+#   dialogue_window() (оставлен шаблон с передачей текста)
+#   show_inventory()
+#   show_merchant_window() (упрощён, без логики покупок)
+#   def send_reply():
+#   def buy()
+#   def sell()
+
+# Через self.logic, который нужно передать при инициализации (можно задать объект логики).
