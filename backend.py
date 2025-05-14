@@ -1,361 +1,196 @@
-# fantasy_interface.py
-import tkinter as tk
-from tkinter import ttk, messagebox, simpledialog
-from PIL import Image, ImageTk
-import io
+import time
 import random
-import config
+from config import *
 
-class FantasyInterface:
-    def __init__(self, root):
-        self.root = root
-        self.root.title("Фэнтези Квест")
-        self.root.geometry("1200x900")
-        self.root.configure(bg="black")
-
-        # Инициализация игрового состояния
-        self.current_npc = None
-        self.status_data = config.STATUS_DATA.copy()
-        self.inventory = config.INVENTORY.copy()
-        self.log_content = ""
-        self.player_location = "Зачарованный лес"
-        self.knows_temple = False
-        self.promised_return = False
-        self.timer_active = False
-        self.shotgun_ammo = 0
+class Player:
+    """Класс игрока с инвентарем и прогрессом"""
+    def __init__(self):
+        self.inventory = {"камешки": 0, "дробовик": 0, "патроны": 0, "чеснок": 0, "яблоко": 0, "еда": 1}
+        self.stones = {"зеленый": False, "красный": False, "синий": False}
         self.has_shotgun = False
-        self.deer_encountered = False
-        self.trader_visible = False
+        self.debt_to_harold = False
 
-        # Инициализация интерфейса
-        self.setup_ui()
-        self.append_text(f"Вы начинаете в {self.player_location}!", tag="system")
+    def add_item(self, item: str, quantity: int = 1):
+        self.inventory[item] += quantity
 
-    def setup_ui(self):
-        """Создание графического интерфейса"""
-        # Верхняя панель
-        self.top_frame = tk.Frame(self.root, bg="black")
-        self.top_frame.pack(fill=tk.BOTH, expand=True)
+    def remove_item(self, item: str, quantity: int = 1):
+        if self.inventory.get(item, 0) >= quantity:
+            self.inventory[item] -= quantity
 
-        # Панель изображения локации
-        self.image_panel = tk.Label(self.top_frame, bg="black", width=600, height=450)
-        self.image_panel.pack(side=tk.LEFT, padx=10, pady=10)
-        self.load_placeholder_image()
+class Game:
+    """Основной класс игры"""
+    def __init__(self):
+        self.player = Player()
+        self.current_location = "замок"
+        self.temple_unlocked = False
+        self.frog_quiz_passed = False
 
-        # Прогресс-бар для перемещения
-        self.progress_frame = tk.Frame(self.top_frame, bg="black")
-        self.progress_frame.pack(side=tk.BOTTOM, fill=tk.X, padx=10, pady=5)
-        self.progress_bar = ttk.Progressbar(self.progress_frame, mode='determinate', length=580)
-        self.progress_bar.pack(pady=5)
-        self.progress_label = tk.Label(self.progress_frame, text="", fg="white", bg="black")
-        self.progress_label.pack()
+    def change_location(self, new_location: str):
+        """Смена локации с описанием"""
+        self.current_location = new_location
+        print(f"\n=== {LOCATIONS[new_location]} ===")
+        time.sleep(1)
 
-        # Текстовое поле для лога событий
-        self.text_box = tk.Text(
-            self.top_frame,
-            wrap=tk.WORD,
-            bg="black",
-            fg="white",
-            font=("Consolas", 14)
-        )
-        self.text_box.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True, padx=10, pady=10)
-        self.text_box.config(state=tk.DISABLED)
-        self.setup_text_tags() 
-
-        # Панель кнопок действий
-        self.button_frame = tk.Frame(self.root, bg="black")
-        self.button_frame.pack(pady=10)
-        self.setup_buttons()
-
-        # Панель статуса игрока
-        self.status_frame = tk.Frame(self.root, bg="black")
-        self.status_frame.pack(fill=tk.X, padx=10, pady=5)
-        self.setup_status()
-
-    def setup_text_tags(self):
-        """Настройка цветовых тегов для текста"""
-        color_scheme = {
-            "event": "lightblue",    # События
-            "dialogue": "lightgreen", # Диалоги NPC
-            "system": "gray",       # Системные сообщения
-            "warning": "orange",    # Предупреждения
-            "error": "red",         # Критические ошибки
-            "success": "green",     # Успешные действия
-            "item": "yellow"        # Предметы
-        }
-        for tag, color in color_scheme.items():
-            self.text_box.tag_config(tag, foreground=color)
-
-    def setup_buttons(self):
-        """Инициализация кнопок управления"""
-        buttons = [
-            ("Переместиться", self.start_movement),
-            ("Поговорить", self.handle_dialogue),
-            ("Инвентарь", self.show_inventory),
-            ("Торговец", self.show_merchant),
-            ("Лог", self.show_log)
-        ]
-        for text, command in buttons:
-            btn = tk.Button(
-                self.button_frame,
-                text=text,
-                width=15,
-                command=command,
-                bg="#333",
-                fg="white")
-            btn.pack(side=tk.LEFT, padx=5)
-
-    def setup_status(self):
-        """Инициализация панели статуса"""
-        self.status_var = tk.StringVar()
-        self.status_label = tk.Label(
-            self.status_frame,
-            textvariable=self.status_var,
-            font=("Arial", 11),
-            fg="white",
-            bg="black")
-        self.status_label.pack(anchor="w", padx=5, pady=2)
-        self.update_status()
-
-    def load_placeholder_image(self):
-        """Загрузка фонового изображения"""
-        img = Image.new("RGB", (600, 450), color=(50, 20, 80))  # Фиолетовый фон
-        output = io.BytesIO()
-        img.save(output, format="PNG")
-        image = Image.open(io.BytesIO(output.getvalue()))
-        photo = ImageTk.PhotoImage(image)
-        self.image_panel.configure(image=photo)
-        self.image_panel.image = photo
-
-    def start_movement(self):
-        """Начало процесса перемещения"""
-        if self.timer_active:
-            return
-
-        if action == "Побродить":
-            self.start_timer("Побродить")
-        elif action == "Поговорить":
-            if self.current_npc:
-                if "Гарольд" in self.current_npc:
-                    self.dialogue_harold()
-                elif "Фроггит" in self.current_npc:
-                    self.dialogue_froggit()
-                elif "Дракула" in self.current_npc:
-                    self.encounter_dracula()
-                elif "Лань" in self.current_npc:
-                    self.dialogue_deer()
-                elif "Лесник" in self.current_npc:
-                    self.dialogue_forester()
-                else:
-                    self.dialogue_window(self.current_npc)
-            else:
-                self.append_text("Здесь нет никого, с кем можно поговорить.", tag="warning")
-        elif action == "Осмотреть":
-            self.append_text(config.LOCATION_DESCRIPTIONS.get(self.player_location, "Ничего интересного."), tag="event")
-        elif action == "Инвентарь":
-            self.show_inventory()
-        elif action == "Торговец":
-            self.show_merchant_window()
-        elif action == "Показать лог":
-            self.show_log_window()
-
-    def start_timer(self, action):
-        self.timer_active = True
-        self.progress_bar["value"] = 0
-        self.progress_label.config(text="Перемещение...")
-        self.update_progress(0)
-
-    def update_progress(self, value):
-        """Обновление прогресс-бара"""
-        if value < 100:
-            self.progress_bar["value"] = value
-            self.root.after(50, lambda: self.update_progress(value + 4))
+    def walk(self):
+        """Механика прогулки с таймером"""
+        print("\nВы начинаете бродить...")
+        time.sleep(WALK_COOLDOWN)
+        
+        # Случайные события
+        event = random.choice(["встреча", "камень", "ничего"])
+        if event == "встреча":
+            self.random_encounter()
+        elif event == "камень" and random.random() <= STONE_DROP_CHANCE:
+            self.player.add_item("камешки")
+            print("Найден камешек!")
         else:
-            self.timer_active = False
-            self.progress_label.config(text="")
-            self.move_to_new_location()
+            print("Ничего интересного не произошло.")
 
-    def move_to_new_location(self):
-        """Обработка перемещения между локациями"""
-        available = self.get_available_locations()
-        choice = self.show_location_dialog(available)
-        
-        if choice:
-            self.player_location = choice
-            self.append_text(f"Вы прибыли в {self.player_location}", tag="system")
-            self.update_status()
-            self.check_npc_spawn()
+    def random_encounter(self):
+        """Обработка случайных встреч"""
+        if self.current_location == "замок":
+            if random.random() <= SPAWN_CHANCE_HAROLD:
+                self.meet_harold()
+            else:
+                self.meet_dracula()
+        elif self.current_location == "болото":
+            self.meet_frog()
+        elif self.current_location == "лес":
+            if random.random() <= DEER_SPAWN_CHANCE:
+                self.meet_deer()
+            else:
+                self.meet_forester()
 
-    def get_available_locations(self):
-        """Получение доступных локаций для перемещения"""
-        connections = {
-            "Зачарованный лес": ["Замок", "Болото"],
-            "Замок": ["Зачарованный лес", "Хижина Гарольда"],
-            "Болото": ["Зачарованный лес", "Храм"],
-            "Хижина Гарольда": ["Замок"],
-            "Храм": ["Болото"]
-        }
-        return connections.get(self.player_location, [])
+    def meet_harold(self):
+        """Взаимодействие с Гарольдом"""
+        print("\nГарольд: 'Эй, хочешь дробовик? Вернешь — живой будешь.'")
+        choice = input("1. Взять дробовик\n2. Отказаться\n> ")
+        if choice == "1":
+            self.player.has_shotgun = True
+            self.player.inventory["дробовик"] = 1
+            self.player.inventory["патроны"] = 3
+            self.player.debt_to_harold = True
+            print("Гарольд: 'Ладно, но помни об обещании!'")
+        else:
+            print("Гарольд: 'Тогда проваливай!'")
 
-    def show_location_dialog(self, locations):
-        """Диалоговое окно выбора локации"""
-        dialog = tk.Toplevel(self.root)
-        dialog.title("Выбор пути")
-        dialog.geometry("300x200")
-        dialog.configure(bg="black")
-        
-        tk.Label(dialog, text="Куда отправимся?", bg="black", fg="white").pack(pady=10)
-        selected = tk.StringVar()
-        
-        for loc in locations:
-            tk.Radiobutton(
-                dialog,
-                text=loc,
-                variable=selected,
-                value=loc,
-                bg="black",
-                fg="white",
-                selectcolor="black"
-            ).pack(anchor="w")
-        
-        def confirm():
-            dialog.destroy()
-            
-        tk.Button(dialog, text="Подтвердить", command=confirm).pack(pady=10)
-        self.root.wait_window(dialog)
-        return selected.get()
+    def meet_dracula(self):
+        """Встреча с Дракулой"""
+        if self.player.inventory.get("чеснок", 0) > 0:
+            print("\nДракула: 'Аррргх! Чеснок!' Исчезает в дыму.")
+            self.player.remove_item("чеснок")
+        else:
+            print("\nДракула съедает вас! Игра окончена.")
+            exit()
 
-    def check_npc_spawn(self):
-        """Проверка появления NPC с шансом 80%"""
-        if random.randint(1, 100) <= config.ENCOUNTER_CHANCE:
-            npc_map = {
-                "Замок": ["Гарольд с дробовиком", "Дракула"],
-                "Болото": ["Лягушка Фроггит"],
-                "Зачарованный лес": ["Лань", "Лесник"],
-                "Хижина Гарольда": ["Гарольд с дробовиком"]
-            }
-            npc_list = npc_map.get(self.player_location, [])
-            if npc_list:
-                self.current_npc = random.choice(npc_list)
-                self.append_text(f"Появился: {self.current_npc}", tag="event")
-
-    def handle_dialogue(self):
-        """Обработка диалогов с NPC"""
-        if not self.current_npc:
-            self.append_text("Здесь никого нет", tag="warning")
-            return
-
-        # РЕПЛИКА ПЕРСОНАЖА: Гарольд с дробовиком
-        if "Гарольд" in self.current_npc:
-            if self.has_shotgun:
-                self.append_text("Гарольд: Верни мой дробовик!", tag="dialogue")
+    def meet_frog(self):
+        """Квиз с лягушкой"""
+        print("\nФроггит: 'Ты кто такой? Слабо ответить на вопросы?'")
+        correct = 0
+        for _ in range(3):
+            q = random.choice(QUESTIONS_POOL)
+            print(f"\n{q['вопрос']}")
+            start = time.time()
+            answer = input("Ответ: ").strip()
+            if time.time() - start > QUESTION_TIMER:
+                print("Время вышло! Фроггит сбежала.")
                 return
-                
-            answer = messagebox.askyesno("Гарольд", "Одолжить дробовик? (3 патрона)")
-            if answer:
-                self.append_text("Гарольд: Держи, но верни вовремя!", tag="dialogue")
-                self.inventory.append("дробовик")
-                self.has_shotgun = True
-                self.shotgun_ammo = 3
-                self.promised_return = True
-
-        # РЕПЛИКА ПЕРСОНАЖА: Лягушка Фроггит
-        elif "Фроггит" in self.current_npc:
-            correct = 0
-            for question, answer in random.sample(config.QUESTIONS, 3):
-                user_answer = simpledialog.askstring("Вопрос", f"{question}")
-                if user_answer and user_answer.lower() == answer.lower():
-                    correct += 1
-            if correct == 3:
-                self.append_text("Фроггит: Храм за болотом!", tag="dialogue")
-                self.knows_temple = True
-                self.status_data["Камни"] += 1
-                self.append_text("Получен камень!", tag="item")
-            else:
-                self.append_text("Фроггит: Ты не достоин!", tag="warning")
-
-        # РЕПЛИКА ПЕРСОНАЖА: Лань
-        elif "Лань" in self.current_npc:
-            if "Яблоко" in self.inventory:
-                answer = messagebox.askyesno("Лань", "Накормить лань яблоком?")
-                if answer:
-                    self.inventory.remove("Яблоко")
-                    self.status_data["Камни"] += 1
-                    self.append_text("Лань дала вам камень!", tag="success")
-            else:
-                self.append_text("Лань хочет яблоко...", tag="dialogue")
-
-        self.update_status()
-
-    def show_inventory(self):
-        """Отображение инвентаря"""
-        items = "\n".join(self.inventory)
-        if self.has_shotgun:
-            items += f"\nДробовик (патроны: {self.shotgun_ammo})"
-        messagebox.showinfo("Инвентарь", f"Содержимое:\n{items}")
-
-    def show_merchant(self):
-        """Окно торговца"""
-        dialog = tk.Toplevel(self.root)
-        dialog.title("Торговец")
-        dialog.geometry("300x400")
-        dialog.configure(bg="black")
-        
-        tk.Label(dialog, text="Что желаете купить?", bg="black", fg="white").pack(pady=10)
-        for item, price in config.TRADER_ITEMS.items():
-            frame = tk.Frame(dialog, bg="black")
-            frame.pack(fill=tk.X, padx=10, pady=2)
-            tk.Label(frame, text=f"{item} - {price} камней", bg="black", fg="white").pack(side=tk.LEFT)
-            btn = tk.Button(
-                frame,
-                text="Купить",
-                command=lambda i=item, p=price: self.buy_item(i, p),
-                bg="#333",
-                fg="white"
-            )
-            btn.pack(side=tk.RIGHT)
-        
-    def buy_item(self, item, price):
-        """Покупка предмета у торговца"""
-        if self.status_data["Камни"] >= price:
-            self.status_data["Камни"] -= price
-            self.inventory.append(item)
-            self.append_text(f"Куплено: {item}", tag="item")
-            self.update_status()
+            if answer.lower() == q['ответ'].lower():
+                correct += 1
+        if correct >= 2:
+            print("Фроггит: 'Храм в локации храм. Катись отсюда!'")
+            self.temple_unlocked = True
         else:
-            messagebox.showerror("Ошибка", "Недостаточно камней!")
+            print("Фроггит: 'Тупица! Проваливай!'")
 
-    def update_status(self):
-        """Обновление панели статуса"""
-        status = f"Локация: {self.player_location} | " + " • ".join(
-            f"{k}: {v}" for k, v in self.status_data.items()
-        )
-        self.status_var.set(status)
+    def trader_menu(self):
+        """Торговец"""
+        print("\nТорговец: 'Чем интересуешься?'")
+        for item, data in TRADER_ITEMS.items():
+            print(f"{item} - {data['цена']} камешков")
+        item = input("Введите название предмета или 'выход': ").lower()
+        if item == "выход":
+            return
+        if item in TRADER_ITEMS:
+            if self.player.inventory["камешки"] >= TRADER_ITEMS[item]["цена"]:
+                self.player.remove_item("камешки", TRADER_ITEMS[item]["цена"])
+                self.player.add_item(item)
+                print(f"Получено: {item}!")
+            else:
+                print("Не хватает камешков.")
 
-    def append_text(self, text, tag=None):
-        """Добавление текста в лог"""
-        self.text_box.config(state=tk.NORMAL)
-        self.text_box.insert(tk.END, f"\n{text}\n", tag)
-        self.text_box.see(tk.END)
-        self.text_box.config(state=tk.DISABLED)
-        self.log_content += f"{text}\n"
+    def meet_deer(self):
+        """Взаимодействие с ланью"""
+        if self.player.inventory.get("яблоко", 0) > 0:
+            print("\nЛань съедает яблоко и оставляет зеленый камень.")
+            self.player.stones["зеленый"] = True
+            self.player.remove_item("яблоко")
+        else:
+            print("\nНужно яблоко, чтобы приманить лань!")
 
-    def show_log(self):
-        """Отображение окна лога"""
-        log_win = tk.Toplevel(self.root)
-        log_win.title("Лог событий")
-        log_win.geometry("700x400")
-        log_win.configure(bg="black")
-        
-        text = tk.Text(log_win, wrap=tk.WORD, bg="black", fg="white", font=("Consolas", 11))
-        scroll = tk.Scrollbar(log_win, command=text.yview)
-        text.config(yscrollcommand=scroll.set)
-        scroll.pack(side=tk.RIGHT, fill=tk.Y)
-        text.pack(fill=tk.BOTH, expand=True)
-        text.insert(tk.END, self.log_content)
-        text.config(state=tk.DISABLED)
+    def meet_forester(self):
+        """Диалог с лесником"""
+        print("\nЛесник: 'А ну пошёл вон отсюда!'")
+        choice = input("1. Грубо ответить\n2. Уйти\n3. Выстрелить\n> ")
+        if choice == "1":
+            print("Лесник: 'Ах ты... Ладно, держи камень!'")
+            self.player.stones["красный"] = True
+        elif choice == "3" and self.player.inventory["патроны"] > 0:
+            print("Вы стреляете в лесника и забираете камень.")
+            self.player.inventory["патроны"] -= 1
+            self.player.stones["красный"] = True
+        else:
+            print("Лесник прогоняет вас.")
+
+    def temple_ending(self):
+        """Финал в храме"""
+        print("\n=== ХРАМ ===")
+        if self.player.debt_to_harold:
+            print("Гарольд с RPG: 'Ты не вернул дробовик!'")
+            time.sleep(1)
+            print("Вас взрывают. Конец игры.")
+        else:
+            print("Вы нашли все камни и победили!")
+        exit()
+
+    def main_loop(self):
+        """Главный игровой цикл"""
+        while True:
+            print(f"\nЛокация: {self.current_location}")
+            print("1. Побродить")
+            print("2. Перейти в другую локацию")
+            print("3. Вызвать торговца")
+            print("4. Инвентарь")
+            print("5. Выйти")
+            
+            choice = input("> ").strip()
+            
+            if choice == "1":
+                self.walk()
+            elif choice == "2":
+                new_loc = input("Куда идем? (замок/болото/лес/хижина/храм): ").lower()
+                if new_loc in LOCATIONS:
+                    if new_loc == "храм" and not self.temple_unlocked:
+                        print("Вы не знаете, где храм!")
+                    else:
+                        self.change_location(new_loc)
+                        if new_loc == "храм":
+                            self.temple_ending()
+                else:
+                    print("Недопустимая локация!")
+            elif choice == "3":
+                self.trader_menu()
+            elif choice == "4":
+                print("\nИнвентарь:")
+                for item, count in self.player.inventory.items():
+                    print(f"{item}: {count}")
+                print("Камни:", [k for k, v in self.player.stones.items() if v])
+            elif choice == "5":
+                exit()
+            else:
+                print("Некорректный выбор")
 
 if __name__ == "__main__":
-    root = tk.Tk()
-    app = FantasyInterface(root)
-    root.mainloop()
+    print("=== Гарольд с дробовиком аааа===")
+    game = Game()
+    game.main_loop()
