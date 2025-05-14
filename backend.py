@@ -191,6 +191,6 @@ class Game:
                 print("Некорректный выбор")
 
 if __name__ == "__main__":
-    print("=== Гарольд с дробовиком аааа===")
+    print("=== Гарольд с дробовиком ===")
     game = Game()
     game.main_loop()
