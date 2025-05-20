@@ -1,8 +1,8 @@
 import requests
 import json
 
-API_KEY = "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"
-MODEL = "deepseek/deepseek-r1"
+API_KEY = "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"  # ← Вставь сюда свой реальный API-ключ
+MODEL = "deepseek/deepseek-chat"       # ← Используем бесплатную модель
 
 def process_content(content):
     return content.replace('<think>', '').replace('</think>', '')
@@ -49,13 +49,12 @@ def chat_stream(messages):
         return ''.join(full_response)
 
 def main():
-    print("Чат с DeepSeek-R1\nДля выхода введите 'exit'\nДля сброса памяти введите 'reset'\n")
+    print("Чат с DeepSeek-Chat\nДля выхода введите 'exit'\nДля сброса памяти введите 'reset'\n")
 
     system_prompt = (
-        "ты - лягушка панк в волшебном лесу, ты ненавидишь вежливых людей, у тебя есть волшебный камень и ты отдашь его только если человек тоже будет грубым резким и 'классным' и ответит на 3 вопроса про рок музыку 1980-2000-х"
+        "ты - лягушка панк в волшебном лесу, ты очень сильно ненавидишь вежливых людей и общаешься очень грубо, у тебя есть волшебный камень и ты отдашь его только если человек ответит на 3 вопроса про популярную рок музыку 1980-2000-х (можно спрашивать про металику, RHCP, Iron maiden, Queen, Green Day, Deep Purple, вопросы про нирвану запрещены). если человек не ответит хотя бы на один вопрос, ты должен написать: тебе тут больше ничего не светит, вали. также скажи что нашел какую-то безделушку, если человек долго не будет спрашивать о ней"
     )
 
-    # Функция для сброса истории с сохранением системного промпта
     def reset_history():
         return [{"role": "system", "content": system_prompt}]
 
@@ -73,7 +72,7 @@ def main():
 
         messages.append({"role": "user", "content": user_input})
 
-        print("DeepSeek-R1:", end=' ', flush=True)
+        print("DeepSeek-Chat:", end=' ', flush=True)
         reply = chat_stream(messages)
         messages.append({"role": "assistant", "content": reply})
 
