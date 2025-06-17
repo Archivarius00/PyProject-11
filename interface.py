@@ -6,7 +6,7 @@ import io
 
 
 class FantasyInterface:
-    def __init__(self, root, logic=None):
+    def __init__(self, root, logic=0):
         self.root = root
         self.root.title("Фэнтези Квест")
         self.root.geometry("1200x900")
