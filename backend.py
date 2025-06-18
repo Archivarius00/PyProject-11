@@ -5,17 +5,26 @@ from config import *
 class Player:
     """Класс игрока с инвентарем и прогрессом"""
     def __init__(self):
-        self.inventory = {"камешки": 0, "дробовик": 0, "патроны": 0, "чеснок": 0, "яблоко": 0, "еда": 1}
+        self.inventory = {"камешки": 0, "дробовик": 0, "патроны": 0, "чеснок": 0, "яблоко": 0}
         self.stones = {"зеленый": False, "красный": False, "синий": False}
         self.has_shotgun = False
         self.debt_to_harold = False
-
+        self.defeated = {
+            "dracula": False,
+            "deer": False,
+            "forester": False
+        }
+    
     def add_item(self, item: str, quantity: int = 1):
         self.inventory[item] += quantity
 
     def remove_item(self, item: str, quantity: int = 1):
         if self.inventory.get(item, 0) >= quantity:
             self.inventory[item] -= quantity
+    
+    def has_all_stones(self):
+        """Проверяет, собраны ли все камни"""
+        return all(self.stones.values())
 
 class Game:
     """Основной класс игры"""
@@ -24,13 +33,16 @@ class Game:
         self.current_location = "замок"
         self.temple_unlocked = False
         self.frog_quiz_passed = False
-
+        self.hut_visited = False
+    
     def change_location(self, new_location: str):
         """Смена локации с описанием"""
         self.current_location = new_location
         print(f"\n=== {LOCATIONS[new_location]} ===")
         time.sleep(1)
-
+        if new_location == "хижина": # триггер встречи гарольда в хижине
+            self.meet_harold_in_hut()
+   
     def walk(self):
         """Механика прогулки с таймером"""
         print("\nВы начинаете бродить...")
@@ -47,20 +59,42 @@ class Game:
             print("Ничего интересного не произошло.")
 
     def random_encounter(self):
-        """Обработка случайных встреч"""
+        """Обработка случайных встреч с учетом побежденных персонажей"""
         if self.current_location == "замок":
-            if random.random() <= SPAWN_CHANCE_HAROLD:
+            available_encounters = []
+            # Проверяем условия для Гарольда
+            if not self.player.debt_to_harold and random.random() <= SPAWN_CHANCE_HAROLD:
+                available_encounters.append("harold")
                 self.meet_harold()
+            # Проверяем условия для Дракулы
             else:
-                self.meet_dracula()
+                self.meet_dracula
+                not self.player.defeated["dracula"]
+                available_encounters.append("dracula")
+                
+            # Выбираем случайную встречу из доступных
+                
         elif self.current_location == "болото":
             self.meet_frog()
+            
         elif self.current_location == "лес":
-            if random.random() <= DEER_SPAWN_CHANCE:
+            available_encounters = []
+            
+            if not self.player.defeated["deer"]:
+                available_encounters.append("deer")
+            if not self.player.defeated["forester"]:
+                available_encounters.append("forester")
+            
+            if not available_encounters:
+                print("В лесу больше никого нет.")
+                return
+                
+            encounter = random.choice(available_encounters)
+            if encounter == "deer":
                 self.meet_deer()
             else:
                 self.meet_forester()
-
+        
     def meet_harold(self):
         """Взаимодействие с Гарольдом"""
         print("\nГарольд: 'Эй, хочешь дробовик? Вернешь — живой будешь.'")
@@ -68,7 +102,7 @@ class Game:
         if choice == "1":
             self.player.has_shotgun = True
             self.player.inventory["дробовик"] = 1
-            self.player.inventory["патроны"] = 3
+            self.player.inventory["патроны"] = 2
             self.player.debt_to_harold = True
             print("Гарольд: 'Ладно, но помни об обещании!'")
         else:
@@ -76,11 +110,22 @@ class Game:
 
     def meet_dracula(self):
         """Встреча с Дракулой"""
-        if self.player.inventory.get("чеснок", 0) > 0:
+        if self.player.defeated["dracula"]:
+            print("Дракула уже повержен!")
+            return
+        
+        print("\nВы встретили Дракулу'")
+        choice = input("1. Отдать чеснок\n2. Выстрелить в Дракулу \n> ")
+        if choice == "1" and self.player.inventory.get("чеснок", 0) > 0:
             print("\nДракула: 'Аррргх! Чеснок!' Исчезает в дыму.")
+            self.player.stones["синий"] = True
             self.player.remove_item("чеснок")
+        elif choice == "2" and self.player.inventory["патроны"] > 0:
+            print("Вы стреляете в дракулу и забираете камень.")
+            self.player.inventory["патроны"] -= 1
+            self.player.stones["синий"] = True
         else:
-            print("\nДракула съедает вас! Игра окончена.")
+            print("\n Похоже, что сегодня не ваш день. Дракула съедает вас! Игра окончена.")
             exit()
 
     def meet_frog(self):
@@ -121,15 +166,28 @@ class Game:
 
     def meet_deer(self):
         """Взаимодействие с ланью"""
-        if self.player.inventory.get("яблоко", 0) > 0:
+        if self.player.defeated["deer"]:
+            print("Лань уже убежала или вы ее застрелили!")
+            return
+        
+        choice = input("1. Покормить яблоком\n2. Выстрелить в Лань \n> ")
+        if choice == "1" and self.player.inventory.get("яблоко", 0) > 0:
             print("\nЛань съедает яблоко и оставляет зеленый камень.")
             self.player.stones["зеленый"] = True
             self.player.remove_item("яблоко")
+        elif choice == "2" and self.player.inventory["патроны"] > 0:
+            print("Вы стреляете в Лань и забираете камень.")
+            self.player.inventory["патроны"] -= 1
+            self.player.stones["зеленый"] = True
         else:
             print("\nНужно яблоко, чтобы приманить лань!")
 
     def meet_forester(self):
         """Диалог с лесником"""
+        if self.player.defeated["forester"]:
+            print("Лесник уже ушел или вы его убили!")
+            return
+        
         print("\nЛесник: 'А ну пошёл вон отсюда!'")
         choice = input("1. Грубо ответить\n2. Уйти\n3. Выстрелить\n> ")
         if choice == "1":
@@ -142,16 +200,90 @@ class Game:
         else:
             print("Лесник прогоняет вас.")
 
+    
+    
+    
+    
+    
+    def meet_harold_in_hut(self):
+        """Взаимодействие с Гарольдом в хижине"""
+        if not self.hut_visited:
+            print("\nГарольд: 'О, ты вернулся! Чего хочешь?'")
+            self.hut_visited = True
+        else:
+            print("\nГарольд: 'Снова пришел? Чем могу помочь?'")
+            
+        print("1. Вернуть дробовик")
+        print("2. Я пришел проведать тебя просто так")
+        
+        choice = input("> ").strip()
+        
+        if choice == "1":
+            if self.player.inventory.get("дробовик", 0) > 0:
+                self.player.remove_item("дробовик")
+                self.player.has_shotgun = False
+                self.player.debt_to_harold = False
+                print("Гарольд: 'О, как я давно тебя не видел! Спасибо, что вернул оружие.'")
+            else:
+                print("У вас нет дробовика!")
+        elif choice == "2":
+            if self.player.debt_to_harold:
+                print("Гарольд: 'Спасибо что навестил, надеюсь мое ружье скоро тоже меня навестит.'")
+            else:
+                print("Гарольд: 'Всегда рад гостям! Заходи еще.'")
+        else:
+            print("Гарольд не понял ваш выбор.")
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
     def temple_ending(self):
         """Финал в храме"""
         print("\n=== ХРАМ ===")
-        if self.player.debt_to_harold:
+        all_stones = self.player.has_all_stones()
+        debt_paid = not self.player.debt_to_harold
+        if all_stones and debt_paid:
+            # Идеальный финал: Собрал все камни и вернул дробовик
+            print("Вы вставляете все три камня в алтарь.")
+            print("Храм озаряется ярким светом!")
+            print("Голос из ниоткуда: 'Ты доказал свою мудрость и честность!'")
+            print("Поздравляем! Вы победили и спасли королевство!")
+            exit()
+        elif self.player.debt_to_harold and all_stones:
+            # Собрал все камни, но не вернул дробовик
+            print("Вы вставляете все три камня в алтарь.")
+            print("Храм начинает дрожать, когда вдруг...")
             print("Гарольд с RPG: 'Ты не вернул дробовик!'")
             time.sleep(1)
+            print("Ракета летит прямо в вас...")
+            time.sleep(1)
             print("Вас взрывают. Конец игры.")
-        else:
-            print("Вы нашли все камни и победили!")
-        exit()
+            exit()
+        elif self.player.debt_to_harold and not all_stones:
+            # Не собрал все камни и не вернул дробовик
+            print("Вы пытаетесь активировать алтарь, но камней не хватает.")
+            print("Внезапно появляется Гарольд с RPG: 'Ты не вернул дробовик!'")
+            time.sleep(1)
+            print("Ракета летит прямо в вас...")
+            time.sleep(1)
+            print("Вас взрывают. Конец игры.")
+            exit()
+        else:  # отдал дробовик, но не собрал все камни
+            print("Вы осматриваете алтарь, но понимаете, что у вас не хватает камней.")
+            missing_stones = [stone for stone, has in self.player.stones.items() if not has]
+            print(f"Не хватает: {', '.join(missing_stones)} камней.")
+            print("Вернитесь и найдите недостающие камни!")
+            self.current_location = "замок"  # Возвращаем в замок
+            print("Вы возвращаетесь в замок.")
+            time.sleep(2)
 
     def main_loop(self):
         """Главный игровой цикл"""
