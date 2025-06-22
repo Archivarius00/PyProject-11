@@ -51,16 +51,25 @@ class Game:
         time.sleep(WALK_COOLDOWN)
         
         # Случайные события
-        event = random.choices(["встреча", "камень", "ничего"], weights=[.25, .25, .5])
-        if event == "встреча":
+        event = random.choices(["встреча", "камень", "ничего"], weights=[.50, .40, .10])
+        
+        if event[0] == "встреча":
+            print("норм")
             self.random_encounter()
         elif event == "камень" and random.random() <= STONE_DROP_CHANCE:
             self.player.add_item("камешки")
             print("Найден камешек!")
         else:
-            print("Ничего интересного не произошло.")
+            print("Ничего интересного не произошло")
 
     def random_encounter(self):
+        """Объявляем"""
+        global FLAG_DRACULA
+        global FLAG_DEER
+        global FLAG_FORESTER
+        global FLAG_FROG
+        global FLAG_HAROLD
+
         """Обработка случайных встреч с учетом побежденных персонажей"""
         if self.current_location == "замок":
             if FLAG_DRACULA == 0 and random.random() <= 0.5:
