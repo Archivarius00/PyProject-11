@@ -2,6 +2,7 @@ import time
 import random
 from config import *
 
+
 class Player:
     """Класс игрока с инвентарем и прогрессом"""
     def __init__(self):
@@ -14,6 +15,7 @@ class Player:
             "deer": False,
             "forester": False
         }
+        
     
     def add_item(self, item: str, quantity: int = 1):
         self.inventory[item] += quantity
@@ -62,17 +64,21 @@ class Game:
         """Обработка случайных встреч с учетом побежденных персонажей"""
         if self.current_location == "замок":
             available_encounters = []
-            # Проверяем условия для Гарольда
-            if not self.player.debt_to_harold and random.random() <= SPAWN_CHANCE_HAROLD:
-                available_encounters.append("harold")
-                self.meet_harold()
-            # Проверяем условия для Дракулы
-            else:
-                self.meet_dracula
-                not self.player.defeated["dracula"]
+            if random.random() <= SPAWN_CHANCE_HAROLD and not self.player.debt_to_harold:
+               self.meet_harold()
+               available_encounters.append("harold")
+            elif not self.player.defeated["dracula"]:
+                self.meet_dracula()
                 available_encounters.append("dracula")
+           
+            
+            
+            
+            if not available_encounters:
+                print("В замке больше никого нет.")
+                return
                 
-            # Выбираем случайную встречу из доступных
+            
                 
         elif self.current_location == "болото":
             self.meet_frog()
@@ -84,10 +90,6 @@ class Game:
                 available_encounters.append("deer")
             if not self.player.defeated["forester"]:
                 available_encounters.append("forester")
-            
-            if not available_encounters:
-                print("В лесу больше никого нет.")
-                return
                 
             encounter = random.choice(available_encounters)
             if encounter == "deer":
@@ -110,9 +112,7 @@ class Game:
 
     def meet_dracula(self):
         """Встреча с Дракулой"""
-        if self.player.defeated["dracula"]:
-            print("Дракула уже повержен!")
-            return
+        
         
         print("\nВы встретили Дракулу'")
         choice = input("1. Отдать чеснок\n2. Выстрелить в Дракулу \n> ")
