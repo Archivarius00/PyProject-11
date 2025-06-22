@@ -1,9 +1,14 @@
 WALK_COOLDOWN = 3
-STONE_DROP_CHANCE = 0.05
-SPAWN_CHANCE_HAROLD = 0.5
+STONE_DROP_CHANCE = 0.03
+SPAWN_CHANCE_HAROLD = 0.7
 QUESTION_TIMER = 15
 DEER_SPAWN_CHANCE = 0.2
-
+SPAWN_CHANCE_DRACULA = 0.3
+FLAG_HAROLD = 0 
+FLAG_DRACULA = 0
+FLAG_FROG = 0
+FLAG_DEER = 0
+FLAG_FORESTER = 0
 TRADER_ITEMS = {
     "чеснок": {"цена": 1, "требуемый_предмет": "еда"},
     "яблоко": {"цена": 2, "требуемый_предмет": None}
