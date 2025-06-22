@@ -51,7 +51,7 @@ class Game:
         time.sleep(WALK_COOLDOWN)
         
         # Случайные события
-        event = random.choice(["встреча", "камень", "ничего"])
+        event = random.choices(["встреча", "камень", "ничего"], weights=[.25, .25, .5])
         if event == "встреча":
             self.random_encounter()
         elif event == "камень" and random.random() <= STONE_DROP_CHANCE:
@@ -63,37 +63,39 @@ class Game:
     def random_encounter(self):
         """Обработка случайных встреч с учетом побежденных персонажей"""
         if self.current_location == "замок":
-            available_encounters = []
-            if random.random() <= SPAWN_CHANCE_HAROLD and not self.player.debt_to_harold:
-               self.meet_harold()
-               available_encounters.append("harold")
-            elif not self.player.defeated["dracula"]:
+            if FLAG_DRACULA == 0 and random.random() <= 0.5:
+                FLAG_DRACULA = 1
                 self.meet_dracula()
-                available_encounters.append("dracula")
-           
-            if not available_encounters:
-                print("В замке больше никого нет.")
-                return
-                
-            
-                
-        elif self.current_location == "болото":
-            self.meet_frog()
-            
-        elif self.current_location == "лес":
-            available_encounters = []
-            
-            if not self.player.defeated["deer"]:
-                available_encounters.append("deer")
-            if not self.player.defeated["forester"]:
-                available_encounters.append("forester")
-                
-            encounter = random.choice(available_encounters)
-            if encounter == "deer":
-                self.meet_deer()
+            elif FLAG_HAROLD == 0:
+                FLAG_HAROLD = 1
+                self.meet_harold()
+            elif FLAG_DRACULA == 0:
+                FLAG_DRACULA = 1
+                self.meet_dracula()
             else:
-                self.meet_forester()
+                print("Вы прошли весь замок вдоль и поперек, похоже здесь никого не осталось")
+                return
+
+        elif self.current_location == "болото":
+            if FLAG_FROG == 0:
+                FLAG_FROG = 1
+                self.meet_frog()
+            elif FLAG_FROG == 1:
+                FLAG_FROG = 2
+                # дать возможность убить лягушку
         
+        elif self.current_location == "лес":
+            if FLAG_DEER == 0 and random.random() <= 0.5:
+                FLAG_DEER = 1
+                self.meet_deer()
+            elif FLAG_FORESTER == 0:
+                FLAG_FORESTER = 1
+                self.meet_forester()
+            elif FLAG_DEER == 0:
+                FLAG_DEER = 1
+                self.meet_deer()
+
+
     def meet_harold(self):
         """Взаимодействие с Гарольдом"""
         print("\nГарольд: 'Эй, хочешь дробовик? Вернешь — живой будешь.'")
