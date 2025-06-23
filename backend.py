@@ -52,14 +52,12 @@ class Game:
         global roll
         # Случайные события
         event = random.choices(["встреча", "камень", "ничего"], weights=[.50, .40, .10])[0]
-        print(f"[DEBUG] Выпало событие: {event}")
+        print(*event)
         if event == "встреча":
-            print("норм")
             self.random_encounter()
         elif event == "камень":
              self.player.add_item("камешки")
              print("Найден камешек!")
-             print(f"[DEBUG] Шанс выпадения камня: {roll} vs STONE_DROP_CHANCE={STONE_DROP_CHANCE}") # Просто для проверки что выпало событие камень или ничего 
         else:
             print("Ничего интересного не произошло")
 
@@ -68,31 +66,22 @@ class Game:
         global FLAG_DRACULA
         global FLAG_FROG
         global FLAG_HAROLD
+        global FLAG_FORESTER
+        global FLAG_DEER
         
         """Обработка случайных встреч с учетом побежденных персонажей"""
         if self.current_location == "замок":
-            if FLAG_HAROLD == 0 and not self.player.has_shotgun == True and random.random() <= SPAWN_CHANCE_HAROLD:
+            if FLAG_HAROLD == 0 and self.player.has_shotgun == False:
                 self.meet_harold()
                 if self.player.has_shotgun:
                    FLAG_HAROLD = 1
-            elif FLAG_DRACULA == 0 and random.random() <= SPAWN_CHANCE_DRACULA:
+            elif FLAG_DRACULA == 0:
                 FLAG_DRACULA = 1
                 self.meet_dracula()
             elif FLAG_HAROLD == 1 and FLAG_DRACULA == 1:
                 print("Вы прошли весь замок вдоль и поперек, похоже здесь никого не осталось")
-            elif FLAG_HAROLD == 1 and FLAG_DRACULA == 1:
-                print("Вы прошли весь замок вдоль и поперек, похоже здесь никого не осталось")
-            elif FLAG_HAROLD == 1 and random.random()  > SPAWN_CHANCE_HAROLD or  random.random() <= SPAWN_CHANCE_HAROLD:# если взял дробаш и потом прокнуло на встречу 
-                 print("Ничего интересного не произошло зуй")
-            elif FLAG_HAROLD == 0 and random.random()  > SPAWN_CHANCE_HAROLD: # это если прокнет событие но сам шанс на гарольда нет (это вроде работает)
-                 print("Ничего интересного не произошло!")
-            elif FLAG_DRACULA == 0 and random.random() <= SPAWN_CHANCE_DRACULA:
-                FLAG_DRACULA = 1
-                self.meet_dracula()
-            elif FLAG_DRACULA == 0 and random.random()  > SPAWN_CHANCE_DRACULA: # то же самое но мб что то не сработало 
-                 print("Ничего интересного не произошло")
-            elif FLAG_DRACULA == 1 and random.random()  > SPAWN_CHANCE_DRACULA or random.random() <= SPAWN_CHANCE_DRACULA:
-                 print("Ничего интересного не произошло")
+            else:
+                print("Ничего интересного не произошло")
             
         elif self.current_location == "болото":
             if FLAG_FROG == 0:
@@ -108,19 +97,13 @@ class Game:
                 return
         
         elif self.current_location == "лес":
-            if  not self.player.stones["зеленый камень"] and random.random() <= SPAWN_CHANCE_DEER:
+            if  FLAG_DEER == 0:
                 self.meet_deer()
-            elif not self.player.stones["красный камень"] and random.random() <= SPAWN_CHANCE_FORESTER:
+            elif FLAG_FORESTER == 0:
                 self.meet_forester()
-            elif self.player.stones["зеленый камень"] and self.player.stones["красный камень"]:
+            elif FLAG_DEER and FLAG_FORESTER:
                 print("Вы прошли весь лес вдоль и поперек, похоже здесь никого не осталось")
-            elif random.random() > SPAWN_CHANCE_DEER:   
-                 print("Ничего интересного не произошло")
-            elif random.random() > SPAWN_CHANCE_FORESTER:
-                print("Ничего интересного не произошло")    
-            elif self.player.stones["красный камень"] and random.random() <= SPAWN_CHANCE_FORESTER or random.random() > SPAWN_CHANCE_FORESTER:
-                 print("Ничего интересного не произошло")
-            elif self.player.stones["зеленый камень"] and random.random() <= SPAWN_CHANCE_DEER or random.random() > SPAWN_CHANCE_DEER:
+            else:
                  print("Ничего интересного не произошло")
             
     
@@ -216,17 +199,19 @@ class Game:
     def meet_deer(self):
         """Взаимодействие с ланью"""
         print("Вы встретили лань")
-        
+        global FLAG_DEER
         choice = input("1. Покормить яблоком\n2. Выстрелить в Лань\n3. Уйти\n> ").strip()
         
         if choice == "1" and self.player.inventory.get("яблоко", 0) > 0:
             print("\nЛань съедает яблоко и оставляет зеленый камень.")
             self.player.stones["зеленый камень"] = True
+            FLAG_DEER = 1
             self.player.remove_item("яблоко")
         elif choice == "2" and self.player.inventory["патроны"] > 0:
             print("Вы стреляете в Лань и забираете камень.")
             self.player.inventory["патроны"] -= 1
             self.player.stones["зеленый камень"] = True
+            FLAG_DEER = 1
         elif choice == "2" and self.player.inventory["патроны"] == 0:
             print('Из-за отсутствия патронов, вы не смогли убить лань')
         elif choice == "3":
@@ -242,10 +227,12 @@ class Game:
         if choice == "1":
             print("Лесник: 'Ах ты... Ладно, держи камень!'")
             self.player.stones["красный камень"] = True
+            FLAG_FORESTER = 1
         elif choice == "3" and self.player.inventory["патроны"] > 0:
             print("Вы стреляете в лесника и забираете камень.")
             self.player.inventory["патроны"] -= 1
             self.player.stones["красный камень"] = True
+            FLAG_FORESTER = 1
         elif choice == "3" and self.player.inventory["патроны"] == 0:
              print("ахаха, дробовик взял а патронов то нет")
         else:
