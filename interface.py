@@ -5,6 +5,8 @@ import io
 from config import *
 from ai_chat import chat_stream
 import time
+from backend import *
+
 
 class FantasyInterface:
     def __init__(self, root, logic=None):
@@ -54,7 +56,7 @@ class FantasyInterface:
 
         self.buttons = {
             "Побродить": tk.Button(self.button_frame, text="Побродить", command=lambda: self.handle_action("Побродить"), bg="#333", fg="white", width=15),
-            "Поговорить": tk.Button(self.button_frame, text="Поговорить", command=self.start_ai_dialogue, bg="#333", fg="white", width=15, state="disabled"),
+            "Торговец": tk.Button(self.button_frame, text="Торговец", command=self.handle_action("Торговец"), bg="#333", fg="white", width=15, state="disabled"),
             "Инвентарь": tk.Button(self.button_frame, text="Инвентарь", command=lambda: self.handle_action("Инвентарь"), bg="#333", fg="white", width=15),
             "Локации": tk.Button(self.button_frame, text="Локации", command=lambda: self.handle_action("Локации"), bg="#333", fg="white", width=15)
         }
@@ -92,7 +94,13 @@ class FantasyInterface:
             self.show_inventory()
         elif action == "Локации":
             self.show_location_selector()
+        elif action == "Торговец":
+            if self.logic:
+                self.logic.trader_menu()
 
+
+
+    
     def process_command(self, event=None):
         command = self.command_entry.get().strip()
         self.command_entry.delete(0, tk.END)
@@ -123,8 +131,12 @@ class FantasyInterface:
         window.title("Выбор локации")
         tk.Label(window, text="Куда пойдём?").pack(pady=5)
 
-        for loc in ["замок", "болото", "лес", "хижина", "храм"]:
-            tk.Button(window, text=loc, command=lambda l=loc: self.select_location(l, window)).pack(padx=10, pady=2)
+        if FLAG_TEMPLE == 0:
+            for loc in ["замок", "болото", "лес", "хижина"]:
+                tk.Button(window, text=loc, command=lambda l=loc: self.select_location(l, window)).pack(padx=10, pady=2)
+        else:
+            for loc in ["замок", "болото", "лес", "хижина", "храм"]:
+                tk.Button(window, text=loc, command=lambda l=loc: self.select_location(l, window)).pack(padx=10, pady=2)
 
     def select_location(self, location, window):
         if self.logic:

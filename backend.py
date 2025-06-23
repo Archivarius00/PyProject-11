@@ -1,6 +1,7 @@
 from config import *
 import time
 import random
+from interface import *
 
 class Player:
     def __init__(self):
@@ -140,13 +141,16 @@ class Game:
 
     def meet_frog_again(self):
         global FLAG_FROG
+        global FLAG_TEMPLE
         choice = self.interface.show_choice_dialog("Фроггит снова перед вами", ["1. Стрелять", "2. Уйти"])
         if choice == "1. Стрелять" and self.player.inventory["дробовик"] and self.player.inventory["патроны"]:
             self.player.inventory["патроны"] -= 1
             self.temple_unlocked = True
             self.player.defeated["frog"] = True
             self.player.stones["камень - путеводитель"] = True
-            self.interface.append_text("Вы убили Фроггита и нашли камень.", "combat")
+            self.interface.append_text("Вы убили Фроггита и нашли камень.", "system")
+            self.interface.append_text("Кажется на камне проглядывается карта. Она показывает где можно пройти в... Храм?", "system")
+            FLAG_TEMPLE = 1
             FLAG_FROG = 3
         else:
             self.interface.append_text("Вы ушли ни с чем.", "default")
