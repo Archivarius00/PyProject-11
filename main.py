@@ -1,10 +1,9 @@
-from interface import FantasyInterface
-from backend import Game
 import tkinter as tk
+from backend import Game
+from interface import FantasyInterface
 
 if __name__ == "__main__":
     root = tk.Tk()
-    logic = Game()
-    app = FantasyInterface(root, logic=logic)
-    logic.interface = app  # обязательно!
+    game = Game()
+    app = FantasyInterface(root, logic=game)
     root.mainloop()

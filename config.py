@@ -110,3 +110,13 @@ TRADER_ITEM= [
     "Старый ключ",
     "Мешочек с золотом"
 ]
+
+
+INTERFACE_CONFIG = {
+    "font": "Consolas",
+    "font_size": 14,
+    "text_color": "white",
+    "background": "black",
+    "button_color": "#333",
+    "button_active": "#555"
+}
