@@ -12,7 +12,7 @@ FLAG_FROG = 0
 FLAG_DEER = 0
 FLAG_FORESTER = 0
 FLAG_TRADER = 0
-weights=[.50, .40, .10]
+
 
 TRADER_ITEMS = {
     "чеснок": {"цена": 15, "требуемый_предмет": "еда"},
