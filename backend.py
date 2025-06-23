@@ -97,7 +97,7 @@ class Game:
                 return
         
         elif self.current_location == "лес":
-            if  FLAG_DEER == 0:
+            if  FLAG_DEER == 0 and FLAG_FORESTER:
                 self.meet_deer()
             elif FLAG_FORESTER == 0:
                 self.meet_forester()
