@@ -1,12 +1,12 @@
 import time
 import random
 from config import *
-roll = random.random() # это для проверки что выпадает ничего событие или камень. удаллить после уверенности что все хорошо
+
 
 class Player:
     """Класс игрока с инвентарем и прогрессом"""
     def __init__(self):
-        self.inventory = {"камешки": 0, "дробовик": 0, "патроны": 0, "чеснок": 1, "яблоко": 0}
+        self.inventory = {"камешки": 0, "дробовик": 0, "патроны": 0, "чеснок": 0, "яблоко": 0}
         self.stones = {"зеленый камень": False, "красный камень": False, "синий камень": False, "камень - путеводитель": False}
         self.has_shotgun = False
         self.debt_to_harold = False
@@ -31,7 +31,7 @@ class Game:
     """Основной класс игры"""
     def __init__(self):
         self.player = Player()
-        self.current_location = "замок"
+        self.current_location = "лес"
         self.temple_unlocked = False
         self.frog_quiz_passed = False
         self.hut_visited = False
@@ -39,12 +39,16 @@ class Game:
         
     def change_location(self, new_location: str):
         """Смена локации с описанием"""
+        global FLAG_TRADER
         self.current_location = new_location
         print(f"\n=== {LOCATIONS[new_location]} ===")
         time.sleep(1)
         if new_location == "хижина": # триггер встречи гарольда в хижине
             self.meet_harold_in_hut()
-   
+        elif new_location == "замок" and FLAG_TRADER == 0:
+            self.trader_menu()
+            FLAG_TRADER = 1
+
     def walk(self):
         """Механика прогулки с таймером"""
         print("\nВы начинаете бродить...")
@@ -68,10 +72,12 @@ class Game:
         global FLAG_HAROLD
         global FLAG_FORESTER
         global FLAG_DEER
-        
+        global FLAG_TRADER
         """Обработка случайных встреч с учетом побежденных персонажей"""
         if self.current_location == "замок":
+            
             if FLAG_HAROLD == 0 and self.player.has_shotgun == False:
+                print("Гарольд с дробовиком")
                 self.meet_harold()
                 if self.player.has_shotgun:
                    FLAG_HAROLD = 1
@@ -97,10 +103,12 @@ class Game:
                 return
         
         elif self.current_location == "лес":
-            if  FLAG_DEER == 0 and FLAG_FORESTER:
-                self.meet_deer()
-            elif FLAG_FORESTER == 0:
+            if FLAG_FORESTER == 0:
                 self.meet_forester()
+            
+            elif FLAG_DEER == 0 and FLAG_FORESTER:
+                self.meet_deer()
+            
             elif FLAG_DEER and FLAG_FORESTER:
                 print("Вы прошли весь лес вдоль и поперек, похоже здесь никого не осталось")
             else:
@@ -200,22 +208,14 @@ class Game:
         """Взаимодействие с ланью"""
         print("Вы встретили лань")
         global FLAG_DEER
-        choice = input("1. Покормить яблоком\n2. Выстрелить в Лань\n3. Уйти\n> ").strip()
-        
+        choice = input("1. Покормить Лань яблоком\n2. Уйти\n> ").strip()
         if choice == "1" and self.player.inventory.get("яблоко", 0) > 0:
             print("\nЛань съедает яблоко и оставляет зеленый камень.")
             self.player.stones["зеленый камень"] = True
             FLAG_DEER = 1
             self.player.remove_item("яблоко")
-        elif choice == "2" and self.player.inventory["патроны"] > 0:
-            print("Вы стреляете в Лань и забираете камень.")
-            self.player.inventory["патроны"] -= 1
-            self.player.stones["зеленый камень"] = True
-            FLAG_DEER = 1
-        elif choice == "2" and self.player.inventory["патроны"] == 0:
-            print('Из-за отсутствия патронов, вы не смогли убить лань')
-        elif choice == "3":
-             print("Вы уходите, не тронув лань.")
+        elif choice == "2":
+            print("Вы уходите, не тронув лань.")
         else:
             print("\nНужно яблоко, чтобы приманить лань!")
 
@@ -350,6 +350,6 @@ class Game:
                 print("Некорректный выбор")
 
 if __name__ == "__main__":
-    print("=== Гарольд с дробовиком ===")
+    print("=== Start game ===")
     game = Game()
     game.main_loop()

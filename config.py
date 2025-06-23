@@ -1,4 +1,4 @@
-WALK_COOLDOWN = 0.5
+WALK_COOLDOWN = 0.3
 SPAWN_CHANCE_FROG = 0.5
 STONE_DROP_CHANCE = 0.7
 SPAWN_CHANCE_HAROLD = 0.7
@@ -11,11 +11,12 @@ FLAG_DRACULA = 0
 FLAG_FROG = 0
 FLAG_DEER = 0
 FLAG_FORESTER = 0
+FLAG_TRADER = 0
 weights=[.50, .40, .10]
 
 TRADER_ITEMS = {
-    "чеснок": {"цена": 4, "требуемый_предмет": "еда"},
-    "яблоко": {"цена": 5, "требуемый_предмет": None}
+    "чеснок": {"цена": 15, "требуемый_предмет": "еда"},
+    "яблоко": {"цена": 20, "требуемый_предмет": None}
 }
 
 QUESTIONS_POOL = [
