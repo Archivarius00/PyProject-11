@@ -4,6 +4,7 @@ from PIL import Image, ImageTk
 import io
 from config import *
 from ai_chat import chat_stream
+import time
 
 class FantasyInterface:
     def __init__(self, root, logic=None):
@@ -74,8 +75,13 @@ class FantasyInterface:
 
     def append_text(self, text, tag=None):
         self.text_box.config(state=tk.NORMAL)
-        self.text_box.insert(tk.END, f"\n{text}\n", tag)
-        self.text_box.see(tk.END)
+        self.text_box.insert(tk.END, "\n", tag)
+        for char in text:
+            self.text_box.insert(tk.END, char, tag)
+            self.text_box.see(tk.END)
+            self.text_box.update()
+            time.sleep(0.01)
+        self.text_box.insert(tk.END, "\n")
         self.text_box.config(state=tk.DISABLED)
 
     def handle_action(self, action):
