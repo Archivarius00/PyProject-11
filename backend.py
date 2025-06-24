@@ -42,6 +42,7 @@ class Game:
             self.interface.append_text("Ничего интересного не произошло", "default")
         else:
             self.random_encounter()
+        self.interface.update_status_display()
 
     def random_encounter(self):
         if self.current_location == "замок":
@@ -87,6 +88,7 @@ class Game:
             self.meet_harold_in_hut()
         elif new_location == "храм":
             self.temple_ending()
+        self.interface.update_status_display()
 
     def meet_harold(self):
         global FLAG_HAROLD
@@ -101,6 +103,7 @@ class Game:
             self.interface.append_text("Гарольд дал вам дробовик.", "item")
         else:
             self.interface.append_text("Гарольд: 'Тогда вали отсюда.'", "npc")
+        self.interface.update_status_display()
 
     def meet_dracula(self):
         global FLAG_DRACULA
@@ -119,26 +122,12 @@ class Game:
         else:
             self.interface.append_text("Дракула съел вас. Игра окончена.", "combat")
             self.interface.end_game("Дракула съел вас. Конец игры.", "combat")
+        self.interface.update_status_display()
 
     def meet_frog(self):
         global FLAG_FROG
-        self.interface.enable_frog_dialogue()
-        correct = 0
-        # for _ in range(3):
-        #     q = random.choice(QUESTIONS_POOL)
-        #     answer = self.interface.show_text_input(f"{q['вопрос']} (время не ограничено)")
-        #     if answer and answer.lower() == q['ответ'].lower():
-        #         correct += 1
-        if correct >= 2:
-            self.temple_unlocked = True
-            self.frog_quiz_passed = True
-            self.player.defeated["frog"] = True
-            self.player.stones["камень - путеводитель"] = True
-            self.interface.append_text("Фроггит: 'Ладно, иди в храм.'", "npc")
-            FLAG_FROG = 3
-        else:
-            self.interface.append_text("Фроггит: 'Тупица! Вали отсюда!'", "npc")
-            FLAG_FROG = 1
+        FLAG_FROG = 1
+        self.interface.start_ai_dialogue()
 
     def meet_frog_again(self):
         global FLAG_FROG
@@ -155,6 +144,7 @@ class Game:
             FLAG_FROG = 3
         else:
             self.interface.append_text("Вы ушли ни с чем.", "default")
+        self.interface.update_status_display()
 
     def meet_deer(self):
         global FLAG_DEER
@@ -167,6 +157,7 @@ class Game:
             self.interface.append_text("Лань аккуратно берет яблоко с вашей руки и в благодарность дастает из кармана зеленый светящийся камень", "system")
         else:
             self.interface.append_text("Лань: Думаю, что яблоко будет неплохим обменом", "npc")
+        self.interface.update_status_display()
 
     def meet_forester(self):
         choice = self.interface.show_choice_dialog("Лесник: 'Убирайся!'", ["1. Грубо ответить", "2. Уйти", "3. Стрелять"])
@@ -181,6 +172,7 @@ class Game:
             FLAG_FORESTER = 1
         else:
             self.interface.append_text("Лесник уходит...", "npc")
+        self.interface.update_status_display()
 
     def meet_harold_in_hut(self):
         choice = self.interface.show_choice_dialog("Гарольд: 'Что нужно?'", ["1. Вернуть дробовик", "2. Просто навестить"])
@@ -191,9 +183,10 @@ class Game:
             self.interface.append_text("Вы вернули дробовик Гарольду.", "event")
         else:
             self.interface.append_text("Гарольд: 'Ладно. Заходи ещё.'", "npc")
+        self.interface.update_status_display()
 
     def trader_menu(self):
-        self.interface.append_text("Вы оборачиваетесь и видите непонятно как появившуюся у вас за спиной лавку торговца", "item")
+        self.interface.append_text("Вы оборачиваетесь и видите непонятно как появившуюся у вас за спиной лавку торговца", "event")
         self.interface.append_text("Торговец: Решил зайти в мою лавку?", "item")
         options = [f"{item} — {TRADER_ITEMS[item]['цена']} камешков" for item in TRADER_ITEMS]
         choice = self.interface.show_choice_dialog("Торговец: Что хочешь?", options + ["выход"])
@@ -206,6 +199,7 @@ class Game:
                     self.interface.append_text(f"Куплено: {item}", "item")
                 else:
                     self.interface.append_text("Не хватает камешков!", "warning")
+        self.interface.update_status_display()
 
     def temple_ending(self):
         all_stones = self.player.has_all_stones()

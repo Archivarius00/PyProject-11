@@ -9,3 +9,4 @@ if __name__ == "__main__":
     app = FantasyInterface(root, logic=game)
     app.logic.trader_menu()
     root.mainloop()
+    game.interface = app

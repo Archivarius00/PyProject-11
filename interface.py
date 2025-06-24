@@ -56,7 +56,7 @@ class FantasyInterface:
 
         self.buttons = {
             "Побродить": tk.Button(self.button_frame, text="Побродить", command=lambda: self.handle_action("Побродить"), bg="#333", fg="white", width=15),
-            "Торговец": tk.Button(self.button_frame, text="Торговец", command=self.handle_action("Торговец"), bg="#333", fg="white", width=15),
+            "Торговец": tk.Button(self.button_frame, text="Торговец", command=lambda: self.handle_action("Торговец"), bg="#333", fg="white", width=15),
             "Инвентарь": tk.Button(self.button_frame, text="Инвентарь", command=lambda: self.handle_action("Инвентарь"), bg="#333", fg="white", width=15),
             "Локации": tk.Button(self.button_frame, text="Локации", command=lambda: self.handle_action("Локации"), bg="#333", fg="white", width=15)
         }
@@ -97,15 +97,14 @@ class FantasyInterface:
             self.show_inventory()
         elif action == "Локации":
             self.show_location_selector()
-        # elif action == "Торговец":
-        #     if self.logic and get_sugar_daddy():
-        #         game_curr, root_curr = get_sugar_daddy()
-        #         check_daddy = FantasyInterface(root_curr, logic=game_curr)
-        #         check_daddy.logic.trader_menu()
+        elif action == "Торговец":
+            if self.logic and get_sugar_daddy():
+                game_curr, root_curr = get_sugar_daddy()
+                check_daddy = FantasyInterface(root_curr, logic=game_curr)
+                check_daddy.logic.trader_menu()
 
 
 
-    
     def process_command(self, event=None):
         command = self.command_entry.get().strip()
         self.command_entry.delete(0, tk.END)
@@ -200,13 +199,12 @@ class FantasyInterface:
         self.root.destroy()
 
     def start_ai_dialogue(self):
-        if not self.frog_ai_enabled:
-            self.append_text("Сейчас не с кем говорить.", "warning")
-            return
+        self.append_text("Вы встретили лягушку, которая выглядит как самый отвязный панк", "event")
+        self.frog_ai_enabled = True
 
         window = tk.Toplevel(self.root)
-        window.title("Фроггит: диалог")
-        window.geometry("600x400")
+        window.title("диалог")
+        window.geometry("600x800")
         window.configure(bg="black")
 
         text_area = tk.Text(window, bg="black", fg="white", font=("Consolas", 12), wrap=tk.WORD, state=tk.DISABLED)
@@ -220,7 +218,10 @@ class FantasyInterface:
             "content": "ты - лягушка панк в волшебном лесу, ты очень сильно ненавидишь вежливых людей и общаешься очень грубо, у тебя есть волшебный камень и ты отдашь его только если человек ответит на 3 вопроса про популярную рок музыку 1980-2000-х (можно спрашивать про металику, RHCP, Iron maiden, Queen, Green Day, Deep Purple, вопросы про нирвану запрещены). если человек не ответит хотя бы на один вопрос, ты должен написать: тебе тут больше ничего не светит, вали. также скажи что нашел какую-то безделушку, если человек долго не будет спрашивать о ней"
         }]
 
+        answered_once = False
+
         def send():
+            nonlocal answered_once
             user_msg = entry.get().strip()
             if not user_msg:
                 return
@@ -236,6 +237,26 @@ class FantasyInterface:
             text_area.insert(tk.END, f"Фроггит: {ai_response}\n")
             text_area.config(state=tk.DISABLED)
             text_area.see(tk.END)
+            if answered_once:
+                if "тебе тут больше ничего не светит" in ai_response.lower():
+                    self.append_text("Фроггит прогнал вас. Попробуй в другой раз...", "npc")
 
+                    close_btn = tk.Button(window, text="Закрыть", command=window.destroy, bg="#550", fg="white")
+                    close_btn.pack(pady=10)
+                elif ("держи" in ai_response.lower() or "получай" in ai_response.lower()) and "камень" in ai_response.lower():
+                    self.logic.temple_unlocked = True
+                    self.logic.frog_quiz_passed = True
+                    self.logic.player.defeated["frog"] = True
+                    self.logic.player.stones["камень - путеводитель"] = True
+                    self.logic.temple_unlocked = True
+                    self.logic.frog_quiz_passed = True
+                    self.logic.player.defeated["frog"] = True
+                    self.logic.player.stones["камень - путеводитель"] = True
+                    self.append_text("Фроггит отдал вам камень. Теперь вы можете идти в храм!", "event")
+
+                    close_btn = tk.Button(window, text="Закрыть", command=window.destroy, bg="#550", fg="white")
+                    close_btn.pack(pady=10)
+            else:
+                answered_once = True
         entry.bind("<Return>", lambda e: send())
         tk.Button(window, text="Отправить", command=send, bg="#444", fg="white").pack(pady=5)
