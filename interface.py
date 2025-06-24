@@ -6,7 +6,7 @@ from config import *
 from ai_chat import chat_stream
 import time
 from backend import *
-
+from Daddy import *
 
 class FantasyInterface:
     def __init__(self, root, logic=None):
@@ -24,8 +24,8 @@ class FantasyInterface:
         self.create_widgets()
         self.load_placeholder_image()
 
-        if logic:
-            logic.interface = self
+        if self.logic:
+            self.logic.interface = self
             self.update_status_display()
             self.append_text("Добро пожаловать в игру!")
 
@@ -56,7 +56,7 @@ class FantasyInterface:
 
         self.buttons = {
             "Побродить": tk.Button(self.button_frame, text="Побродить", command=lambda: self.handle_action("Побродить"), bg="#333", fg="white", width=15),
-            "Торговец": tk.Button(self.button_frame, text="Торговец", command=self.handle_action("Торговец"), bg="#333", fg="white", width=15, state="disabled"),
+            "Торговец": tk.Button(self.button_frame, text="Торговец", command=self.handle_action("Торговец"), bg="#333", fg="white", width=15),
             "Инвентарь": tk.Button(self.button_frame, text="Инвентарь", command=lambda: self.handle_action("Инвентарь"), bg="#333", fg="white", width=15),
             "Локации": tk.Button(self.button_frame, text="Локации", command=lambda: self.handle_action("Локации"), bg="#333", fg="white", width=15)
         }
@@ -87,6 +87,9 @@ class FantasyInterface:
         self.text_box.config(state=tk.DISABLED)
 
     def handle_action(self, action):
+        global _daddy_is_aroused
+        global get_sugar_daddy
+
         if action == "Побродить":
             if self.logic:
                 self.logic.walk()
@@ -94,9 +97,11 @@ class FantasyInterface:
             self.show_inventory()
         elif action == "Локации":
             self.show_location_selector()
-        elif action == "Торговец":
-            if self.logic:
-                self.logic.trader_menu()
+        # elif action == "Торговец":
+        #     if self.logic and get_sugar_daddy():
+        #         game_curr, root_curr = get_sugar_daddy()
+        #         check_daddy = FantasyInterface(root_curr, logic=game_curr)
+        #         check_daddy.logic.trader_menu()
 
 
 

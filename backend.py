@@ -2,6 +2,7 @@ from config import *
 import time
 import random
 from interface import *
+from Daddy import *
 
 class Player:
     def __init__(self):
