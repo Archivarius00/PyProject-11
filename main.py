@@ -7,6 +7,7 @@ if __name__ == "__main__":
     root = tk.Tk()
     game = Game()
     app = FantasyInterface(root, logic=game)
-    app.logic.trader_menu()
+    app.logic.start()
+    # app.logic.trader_menu()
     root.mainloop()
     game.interface = app

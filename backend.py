@@ -6,7 +6,7 @@ from Daddy import *
 
 class Player:
     def __init__(self):
-        self.inventory = {"камешки": 0, "дробовик": 0, "патроны": 0, "чеснок": 0, "яблоко": 0}
+        self.inventory = {"камешки": 0, "дробовик": 0, "патроны": 0, "чеснок": 1, "яблоко": 0}
         self.stones = {"зеленый камень": False, "красный камень": False, "синий камень": False, "камень - путеводитель": False}
         self.has_shotgun = False
         self.debt_to_harold = False
@@ -39,7 +39,7 @@ class Game:
             self.player.inventory["камешки"] += 1
             self.interface.append_text("Вы нашли камешек", "item")
         elif event == "ничего":
-            self.interface.append_text("Ничего интересного не произошло", "default")
+            self.interface.append_text("Ничего интересного не произошло, вы лишь прошли лишние полмили", "default")
         else:
             self.random_encounter()
         self.interface.update_status_display()
@@ -53,6 +53,7 @@ class Game:
             elif not self.player.has_shotgun and FLAG_HAROLD == 0:
                 self.meet_harold()
             else:
+                self.interface.append_text("Вы обошли все вдоль и поперек", "location")
                 self.interface.append_text("Похоже замок пуст...", "location")
 
         elif self.current_location == "болото":
@@ -61,7 +62,7 @@ class Game:
             elif FLAG_FROG == 1:
                 self.meet_frog_again()
             else:
-                self.interface.append_text("Похоже все фроггиты разбежались, больше никого нет", "system")
+                self.interface.append_text("Похоже все лягушки распрыгались кто куда...", "system")
 
         elif self.current_location == "лес":
             if FLAG_FORESTER == 0:
@@ -69,15 +70,15 @@ class Game:
             elif FLAG_DEER == 0:
                 self.meet_deer()
             else:
-                self.interface.append_text("Лес тих и пуст...", "location")
+                self.interface.append_text("Лес тих и пуст... и устрашает...", "location")
 
     def change_location(self, new_location):
         if new_location not in LOCATIONS:
-            self.interface.append_text("Такой локации не существует!", "warning")
+            self.interface.append_text("Кажется вы пытаетесь попасть в никуда", "warning")
             return
 
         if new_location == "храм" and not self.temple_unlocked:
-            self.interface.append_text("Вы не знаете, где храм!", "warning")
+            self.interface.append_text("Вы еще не знаете где храм!", "warning")
             return
 
         self.current_location = new_location
@@ -93,55 +94,91 @@ class Game:
     def meet_harold(self):
         global FLAG_HAROLD
         FLAG_HAROLD = 1
-        self.interface.append_text("Гарольд: 'Хочешь дробовик? Вернёшь — живым будешь.'", "npc")
-        choice = self.interface.show_choice_dialog("Взять дробовик?", ["1. Взять", "2. Отказаться"])
-        if choice == "1. Взять":
-            self.player.has_shotgun = True
-            self.player.inventory["дробовик"] = 1
-            self.player.inventory["патроны"] = 2
-            self.player.debt_to_harold = True
-            self.interface.append_text("Гарольд дал вам дробовик.", "item")
+        self.interface.start_ai_dialogue_harold()
+    
+    def meet_harold_in_hut(self):
+        global FLAG_HAROLD_IN_HUT
+        FLAG_HAROLD_IN_HUT = 1
+        
+
+
+        choice = self.interface.show_choice_dialog("Гарольд: 'Чего хотел?'", ["1. Вернуть дробовик", "2. Просто навестить"])
+        if choice == "1. Вернуть дробовик" and self.player.inventory["дробовик"]:
+            self.player.inventory["дробовик"] = 0
+            self.player.has_shotgun = False
+            self.player.debt_to_harold = False
+            self.interface.append_text("Вы вернули дробовик Гарольду. Он искрене благодарен (а ведь за свой дробовик он бы вас убил).", "event")
         else:
-            self.interface.append_text("Гарольд: 'Тогда вали отсюда.'", "npc")
-        self.interface.update_status_display()
+            self.interface.append_text("Гарольд: Чтож, давай пообщаемся.'", "npc")
+            self.interface.start_ai_dialogue_harold_in_hut()
+
+
+
 
     def meet_dracula(self):
         global FLAG_DRACULA
         FLAG_DRACULA = 1
-        choice = self.interface.show_choice_dialog("Вы встретили Дракулу!", ["1. Отдать чеснок", "2. Стрелять"])
-        if choice == "1. Отдать чеснок" and self.player.inventory["чеснок"] > 0:
-            self.player.inventory["чеснок"] -= 1
-            self.player.stones["синий камень"] = True
-            self.player.defeated["dracula"] = True
-            self.interface.append_text("Дракула исчезает от чеснока!", "event")
-        elif choice == "2. Стрелять" and self.player.inventory["патроны"] > 0:
-            self.player.inventory["патроны"] -= 1
-            self.player.stones["синий камень"] = True
-            self.player.defeated["dracula"] = True
-            self.interface.append_text("Вы застрелили Дракулу!", "combat")
+        self.interface.append_text("Вдруг вы слышите тихий шелест множества крыльев за спиной. Вы обарачиваетсь и видите выскую фигуру в плаще которая стримительно движется к вам", "event")
+        self.interface.append_text("Вы резко вспоминаете про табличку на входе, это сам граф Дракула! Нужно что-то делать!!!", "combat")
+
+        if self.player.inventory["дробовик"] > 0:
+            choice = self.interface.show_choice_dialog("Вы встретили Дракулу!", ["1. Кинуть чеснок в вампира", "2. Выстрелить из дробовика"])
+            if choice == "1. Кинуть чеснок в вампира" and self.player.inventory["чеснок"] > 0:
+                self.player.inventory["чеснок"] -= 1
+                self.player.stones["красный камень"] = True
+                self.player.defeated["dracula"] = True
+                self.interface.append_text("Великий Граф Дракула испугался овоща! Шипя, он резко превращается в стаю летучих мышей и улетает прочь, выронив что-то блестящее", "event")
+                self.interface.append_text("Вы поднимаете блестяшку. Похоже этот красный камень для чего-то нужен, лучше бы его оставить себе", "event")
+            elif choice == "2. Выстрелить из дробовика" and self.player.inventory["патроны"] > 0:
+                self.player.inventory["патроны"] -= 1
+                self.player.stones["красный камень"] = True
+                self.player.defeated["dracula"] = True
+                self.interface.append_text("Вы смогли убить Великого Графа Дракуду из дробовика, удивительно. Вы смотрите как он превращается в пепел. Вдруг в горстке пепла вы видите что-то блестящее", "combat")
+                self.interface.append_text("Вы поднимаете блестяшку. Похоже этот красный камень для чего-то нужен, лучше бы его оставить себе", "event")
+            else:
+                self.interface.append_text("Вы оказались совршенно неподготовленными, Дракула выпил вашу кровь и выкинул ваще бесполезное тело в ров замка", "combat")
+                self.interface.end_game("Игр", "combat")
+            self.interface.update_status_display()
+
+
         else:
-            self.interface.append_text("Дракула съел вас. Игра окончена.", "combat")
-            self.interface.end_game("Дракула съел вас. Конец игры.", "combat")
-        self.interface.update_status_display()
+            choice = self.interface.show_choice_dialog("Вы встретили Дракулу!", ["1. Кинуть чеснок в вампира"])
+            if choice == "1. Кинуть чеснок в вампира" and self.player.inventory["чеснок"] > 0:
+                self.player.inventory["чеснок"] -= 1
+                self.player.stones["красный камень"] = True
+                self.player.defeated["dracula"] = True
+                self.interface.append_text("Великий Граф Дракула испугался овоща! Шипя, он резко превращается в стаю летучих мышей и улетает прочь, выронив что-то блестящее", "event")
+                self.interface.append_text("Вы поднимаете блестяшку. Похоже этот красный камень для чего-то нужен, лучше бы его оставить себе", "event")
+            else:
+                self.interface.append_text("Дракула съел вас. Игра окончена.", "combat")
+                self.interface.end_game("Дракула съел вас. Конец игры.", "combat")
+            self.interface.update_status_display()
+
 
     def meet_frog(self):
         global FLAG_FROG
         FLAG_FROG = 1
-        self.interface.start_ai_dialogue()
+        self.interface.start_ai_dialogue_frog()
 
     def meet_frog_again(self):
         global FLAG_FROG
         global FLAG_TEMPLE
-        choice = self.interface.show_choice_dialog("Фроггит снова перед вами", ["1. Стрелять", "2. Уйти"])
+        choice = self.interface.show_choice_dialog("Фроггит снова перед вами", ["1. Выстрелить из дробовика", "2. Уйти"])
         if choice == "1. Стрелять" and self.player.inventory["дробовик"] and self.player.inventory["патроны"]:
             self.player.inventory["патроны"] -= 1
             self.temple_unlocked = True
             self.player.defeated["frog"] = True
             self.player.stones["камень - путеводитель"] = True
-            self.interface.append_text("Вы убили Фроггита и нашли камень.", "system")
+            self.interface.append_text("Вы убили Фроггита. Он почему-то превратился в пепел. В кучке пепла вы замечаете как что-то блестит.", "system")
+            self.interface.append_text("Вы поднимаете это. Кажется вы нашли еще один камень! Но подождите...", "system")
             self.interface.append_text("Кажется на камне проглядывается карта. Она показывает где можно пройти в... Храм?", "system")
+            self.interface.append_text("Кажется камень что-то шепчет... Вы подносте его к уху, он говорит, что вряд ли у вас получится вернутся из храма", "system")
             FLAG_TEMPLE = 1
             FLAG_FROG = 3
+        elif choice == "1. Стрелять" and not self.player.inventory["дробовик"]:
+            self.interface.append_text("Упс... Кажется патроны закончились", "warning")
+        elif choice == "1. Стрелять" and self.player.inventory["дробовик"] and self.player.inventory["патроны"]:
+            self.interface.append_text("Упс... Кажется у вас нет дробовика", "warning")
         else:
             self.interface.append_text("Вы ушли ни с чем.", "default")
         self.interface.update_status_display()
@@ -160,30 +197,10 @@ class Game:
         self.interface.update_status_display()
 
     def meet_forester(self):
-        choice = self.interface.show_choice_dialog("Лесник: 'Убирайся!'", ["1. Грубо ответить", "2. Уйти", "3. Стрелять"])
         global FLAG_FORESTER
-        if choice == "1. Грубо ответить" or (choice == "3. Стрелять" and self.player.inventory["патроны"] > 0):
-            if choice == "3. Стрелять":
-                self.player.inventory["патроны"] -= 1
-                FLAG_FORESTER = 1
-            self.player.stones["красный камень"] = True
-            self.player.defeated["forester"] = True
-            self.interface.append_text("Вы получили красный камень.", "item")
-            FLAG_FORESTER = 1
-        else:
-            self.interface.append_text("Лесник уходит...", "npc")
-        self.interface.update_status_display()
+        FLAG_FORESTER = 1
+        self.interface.start_ai_dialogue_forester()
 
-    def meet_harold_in_hut(self):
-        choice = self.interface.show_choice_dialog("Гарольд: 'Что нужно?'", ["1. Вернуть дробовик", "2. Просто навестить"])
-        if choice == "1. Вернуть дробовик" and self.player.inventory["дробовик"]:
-            self.player.inventory["дробовик"] = 0
-            self.player.has_shotgun = False
-            self.player.debt_to_harold = False
-            self.interface.append_text("Вы вернули дробовик Гарольду.", "event")
-        else:
-            self.interface.append_text("Гарольд: 'Ладно. Заходи ещё.'", "npc")
-        self.interface.update_status_display()
 
     def trader_menu(self):
         self.interface.append_text("Вы оборачиваетесь и видите непонятно как появившуюся у вас за спиной лавку торговца", "event")
@@ -206,7 +223,7 @@ class Game:
         debt_paid = not self.player.debt_to_harold
         self.interface.append_text("Вы заходите в шаткий храм и видите некую арку с 4-мя отвертиями размером с небольшой камень", "event")
 
-        if not debt_paid:
+        if all_stones and not debt_paid:
             self.interface.append_text("Гарольд с РПГ: Эй, куда собрался? Ты не вернул дробовик!", "combat")
             self.interface.append_text("В вас летит ракетный снаряд ПГ-7В с кумулятивной гранатой калибра 85 мм, вы умираете", "combat")
             self.interface.end_game("Вы не вернули Гарольду дробовик, он явно расстроился. Конец игры.", "combat")
@@ -215,4 +232,6 @@ class Game:
             self.interface.end_game("Вы победили! Игра завершена.", "event")
         elif not all_stones and debt_paid:
             self.interface.append_text(f"Кажется тебе не хватает камней для активации портала, поищи еще", "warning")
+        elif not all_stones and not debt_paid:
+            self.interface.append_text(f"Кажется тебе не хватает камней для активации портала, поищи еще. (а отдал ли ты дробовик Гарольду)", "warning")
 
