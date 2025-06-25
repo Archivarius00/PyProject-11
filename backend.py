@@ -6,7 +6,7 @@ from Daddy import *
 
 class Player:
     def __init__(self):
-        self.inventory = {"камешки": 0, "дробовик": 0, "патроны": 0, "чеснок": 1, "яблоко": 0}
+        self.inventory = {"камешки": 0, "дробовик": 0, "патроны": 0, "чеснок": 1, "яблоко": 1}
         self.stones = {"зеленый камень": False, "красный камень": False, "синий камень": False, "камень - путеводитель": False}
         self.has_shotgun = False
         self.debt_to_harold = False
